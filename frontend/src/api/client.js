@@ -61,9 +61,9 @@ async function request(ruta, { method = 'GET', body, headers = {}, publico = fal
   try {
     res = await fetch(`${BASE_URL}${ruta}`, opciones);
   } catch {
-    // Error de red: backend caído o sin conexión.
+    // Fetch no distingue entre una caída del backend, URL incorrecta y CORS.
     throw new ApiError(
-      'No se pudo conectar con el servidor. Verifica que la API esté disponible.',
+      'No se pudo conectar con la API. Revisa VITE_API_URL, que el backend esté disponible y la configuración CORS (CLIENT_URL).',
       0,
       [],
     );

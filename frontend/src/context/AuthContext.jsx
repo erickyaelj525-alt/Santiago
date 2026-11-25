@@ -10,6 +10,20 @@ import {
 /** Contexto de autenticación de Apiario Digital. */
 const AuthContext = createContext(null);
 
+function extraerSesion(data) {
+  const respuesta = data?.data ?? data;
+  const mensaje = respuesta?.mensaje || respuesta?.message;
+
+  if (typeof respuesta?.token !== 'string' || !respuesta.token.trim()) {
+    throw new Error(mensaje || 'El servidor no devolvió el token de autenticación.');
+  }
+  if (!respuesta.usuario || typeof respuesta.usuario !== 'object' || Array.isArray(respuesta.usuario)) {
+    throw new Error(mensaje || 'El servidor no devolvió los datos del usuario.');
+  }
+
+  return { token: respuesta.token, usuario: respuesta.usuario };
+}
+
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [token, setTokenState] = useState(() => getToken());
@@ -58,11 +72,11 @@ export function AuthProvider({ children }) {
 
   /** Inicia sesión con email y password. */
   const login = useCallback(async (email, password) => {
-    const data = await post('/auth/login', { email, password });
-    setToken(data.token);
-    setTokenState(data.token);
-    setUsuario(data.usuario);
-    return data.usuario;
+    const sesion = extraerSesion(await post('/auth/login', { email, password }));
+    setToken(sesion.token);
+    setTokenState(sesion.token);
+    setUsuario(sesion.usuario);
+    return sesion.usuario;
   }, []);
 
   /**
@@ -77,11 +91,11 @@ export function AuthProvider({ children }) {
 
   /** Confirma el código de verificación y deja la sesión iniciada. */
   const verificar = useCallback(async (email, codigo) => {
-    const data = await post('/auth/verificar', { email, codigo });
-    setToken(data.token);
-    setTokenState(data.token);
-    setUsuario(data.usuario);
-    return data.usuario;
+    const sesion = extraerSesion(await post('/auth/verificar', { email, codigo }));
+    setToken(sesion.token);
+    setTokenState(sesion.token);
+    setUsuario(sesion.usuario);
+    return sesion.usuario;
   }, []);
 
   /** Solicita un nuevo código de verificación para un correo. */
