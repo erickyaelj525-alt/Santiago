@@ -75,3 +75,10 @@ export function formatearKg(valor, decimales = 1) {
 /** Capitaliza la primera letra. */
 export const capitalizar = (texto = '') =>
   texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : '';
+
+/** Etiqueta legible del rol del usuario ('dueno' | 'trabajador'). */
+export function etiquetaRol(rol) {
+  if (rol === 'dueno') return 'Dueño';
+  if (rol === 'trabajador') return 'Trabajador';
+  return '—';
+}

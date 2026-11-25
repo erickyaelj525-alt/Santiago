@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import useFetch from '../hooks/useFetch.js';
+import useAuth from '../hooks/useAuth.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { post, put, del } from '../api/client.js';
 
@@ -156,6 +157,7 @@ function ApiarioForm({ inicial, onGuardar, onCancelar, guardando }) {
 /** Página de gestión de apiarios: listado, mapa y CRUD con modales. */
 export default function Apiarios() {
   const { datos, cargando, error, refetch } = useFetch('/apiarios');
+  const { esDueno } = useAuth();
   const toast = useToast();
 
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -294,9 +296,12 @@ export default function Apiarios() {
                       Ver mapa
                     </button>
                   )}
-                  <button type="button" className="btn btn--pequeno btn--peligro" onClick={() => setAEliminar(a)}>
-                    Eliminar
-                  </button>
+                  {/* Solo el dueño puede eliminar apiarios. */}
+                  {esDueno && (
+                    <button type="button" className="btn btn--pequeno btn--peligro" onClick={() => setAEliminar(a)}>
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

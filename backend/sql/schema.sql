@@ -9,15 +9,26 @@ CREATE DATABASE apiario_digital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 USE apiario_digital;
 
 -- ---------------------------------------------------------------------
--- Usuarios (apicultores). La contraseña se guarda con hash bcrypt.
+-- Usuarios. Dos roles:
+--   * 'dueno'      -> propietario de la operación apícola (dueño de los datos)
+--   * 'trabajador' -> empleado creado por un dueño (dueno_id apunta a su dueño)
+-- Los trabajadores comparten los apiarios de su dueño (ver backend/src/utils/scope.js).
+-- La contraseña se guarda con hash bcrypt (nunca en texto plano).
 -- ---------------------------------------------------------------------
 CREATE TABLE usuarios (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   nombre        VARCHAR(120)  NOT NULL,
   email         VARCHAR(160)  NOT NULL UNIQUE,
   password_hash VARCHAR(255)  NOT NULL,
-  rol           ENUM('apicultor','admin') NOT NULL DEFAULT 'apicultor',
-  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  rol           ENUM('dueno','trabajador') NOT NULL DEFAULT 'dueno',
+  dueno_id      INT           NULL,  -- dueño al que pertenece un trabajador (NULL si es dueño)
+  email_verificado    TINYINT(1) NOT NULL DEFAULT 0,  -- 1 cuando confirma el código enviado a su correo
+  codigo_verificacion VARCHAR(6) NULL,                -- código de 6 dígitos (se borra al verificar)
+  codigo_expira       DATETIME   NULL,                -- vigencia del código
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_usuario_dueno FOREIGN KEY (dueno_id)
+    REFERENCES usuarios(id) ON DELETE CASCADE,
+  INDEX idx_usuarios_dueno (dueno_id)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -46,7 +57,7 @@ CREATE TABLE colmenas (
   codigo            VARCHAR(40)  NOT NULL,
   tipo              ENUM('langstroth','top_bar','warre','otro') NOT NULL DEFAULT 'langstroth',
   fecha_instalacion DATE         NULL,
-  estado            ENUM('activa','inactiva','perdida') NOT NULL DEFAULT 'activa',
+  estado            ENUM('activa','débil','reina_nueva','vacía','enferma','muerta') NOT NULL DEFAULT 'activa',
   reina_marcada     TINYINT(1)   NOT NULL DEFAULT 0,
   notas             VARCHAR(255) NULL,
   created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
@@ -72,10 +83,14 @@ CREATE TABLE inspecciones (
   alimento_polen  TINYINT(1)    NOT NULL DEFAULT 1,
   clima_temp      DECIMAL(4,1)  NULL,                 -- temperatura registrada
   notas           VARCHAR(500)  NULL,
+  creado_por      INT           NULL,                 -- autor del registro (dueño o trabajador)
   created_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_inspeccion_colmena FOREIGN KEY (colmena_id)
     REFERENCES colmenas(id) ON DELETE CASCADE,
-  INDEX idx_inspecciones_colmena (colmena_id)
+  CONSTRAINT fk_inspeccion_autor FOREIGN KEY (creado_por)
+    REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_inspecciones_colmena (colmena_id),
+  INDEX idx_inspecciones_autor (creado_por)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -89,10 +104,14 @@ CREATE TABLE cosechas (
   tipo_miel   VARCHAR(80)   NULL,
   humedad_pct DECIMAL(4,1)  NULL,
   notas       VARCHAR(255)  NULL,
+  creado_por  INT           NULL,                     -- autor del registro
   created_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_cosecha_colmena FOREIGN KEY (colmena_id)
     REFERENCES colmenas(id) ON DELETE CASCADE,
-  INDEX idx_cosechas_colmena (colmena_id)
+  CONSTRAINT fk_cosecha_autor FOREIGN KEY (creado_por)
+    REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_cosechas_colmena (colmena_id),
+  INDEX idx_cosechas_autor (creado_por)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -107,8 +126,12 @@ CREATE TABLE tratamientos (
   fecha_inicio DATE         NOT NULL,
   fecha_fin    DATE         NULL,
   notas        VARCHAR(255) NULL,
+  creado_por   INT          NULL,                     -- autor del registro
   created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_tratamiento_colmena FOREIGN KEY (colmena_id)
     REFERENCES colmenas(id) ON DELETE CASCADE,
-  INDEX idx_tratamientos_colmena (colmena_id)
+  CONSTRAINT fk_tratamiento_autor FOREIGN KEY (creado_por)
+    REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_tratamientos_colmena (colmena_id),
+  INDEX idx_tratamientos_autor (creado_por)
 ) ENGINE=InnoDB;

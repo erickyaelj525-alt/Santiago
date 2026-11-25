@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth.js';
 import Badge from '../components/Badge.jsx';
+import { etiquetaRol } from '../utils/format.js';
 
 /**
  * Perfil del usuario autenticado (datos de sesión) + cierre de sesión.
  */
 export default function Perfil() {
-  const { usuario, logout } = useAuth();
+  const { usuario, esDueno, logout } = useAuth();
   const navigate = useNavigate();
 
   function cerrarSesion() {
@@ -26,7 +27,14 @@ export default function Perfil() {
           <dt>Correo</dt>
           <dd>{usuario?.email || '—'}</dd>
           <dt>Rol</dt>
-          <dd><Badge variante="info">{usuario?.rol || 'apicultor'}</Badge></dd>
+          <dd>
+            <Badge variante={esDueno ? 'alerta' : 'info'}>{etiquetaRol(usuario?.rol)}</Badge>
+            <span className="texto-suave texto-pequeno" style={{ marginLeft: '0.5rem' }}>
+              {esDueno
+                ? 'Control total de la operación.'
+                : 'Puedes crear y editar; el dueño gestiona el equipo.'}
+            </span>
+          </dd>
         </dl>
       </section>
 

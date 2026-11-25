@@ -3,7 +3,7 @@ import AuthContext from '../context/AuthContext.jsx';
 
 /**
  * Hook de conveniencia para consumir el contexto de autenticación.
- * Devuelve { usuario, token, cargando, login, register, logout }.
+ * Devuelve { usuario, token, cargando, esDueno, login, register, logout }.
  */
 export default function useAuth() {
   const ctx = useContext(AuthContext);

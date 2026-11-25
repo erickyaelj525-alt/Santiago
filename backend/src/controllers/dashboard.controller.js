@@ -1,9 +1,12 @@
 /**
  * Controlador del panel (dashboard).
- * Devuelve KPIs, producción mensual, distribución por estado y alertas,
- * siempre acotado a los datos del usuario autenticado.
+ * Devuelve KPIs, producción mensual, distribución por estado, alertas,
+ * el equipo de trabajo y las colmenas prioritarias. Siempre acotado a los
+ * datos del DUEÑO de la operación (propietarioId), de modo que un trabajador
+ * vea el panel de su dueño.
  */
 import { query } from '../config/db.js';
+import { propietarioId } from '../utils/scope.js';
 
 const DIAS_INSPECCION_VENCIDA = 14;
 const DIAS_MS = 24 * 60 * 60 * 1000;
@@ -22,7 +25,7 @@ function ultimosDoceMeses() {
 /** GET /api/dashboard */
 export async function get(req, res, next) {
   try {
-    const usuarioId = req.user.id;
+    const usuarioId = propietarioId(req);
 
     // --- KPIs (una sola consulta con subconsultas) ---------------------------
     const kpisFilas = await query(
@@ -165,11 +168,89 @@ export async function get(req, res, next) {
     // Orden: alertas 'alta' primero.
     alertas.sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'alta' ? -1 : 1));
 
+    // --- Equipo (dueño + sus trabajadores con su actividad) ------------------
+    // Misma lógica que trabajadores.controller.list, versión compacta.
+    const equipo = await query(
+      `SELECT u.id, u.nombre, u.email, u.rol,
+              (SELECT COUNT(*) FROM inspecciones i
+                 JOIN colmenas c ON c.id = i.colmena_id
+                 JOIN apiarios a ON a.id = c.apiario_id
+                WHERE i.creado_por = u.id AND a.usuario_id = ?) AS inspecciones_registradas,
+              (SELECT MAX(i.fecha) FROM inspecciones i
+                 JOIN colmenas c ON c.id = i.colmena_id
+                 JOIN apiarios a ON a.id = c.apiario_id
+                WHERE i.creado_por = u.id AND a.usuario_id = ?) AS ultima_actividad
+         FROM usuarios u
+        WHERE u.id = ? OR u.dueno_id = ?
+        ORDER BY (u.rol = 'dueno') DESC, u.nombre`,
+      [usuarioId, usuarioId, usuarioId, usuarioId],
+    );
+
+    // --- Próximas inspecciones ----------------------------------------------
+    // Colmenas activas sin inspección en más de 14 días (o nunca inspeccionadas).
+    // Convención: si la colmena nunca fue inspeccionada, dias_sin_inspeccion = 999.
+    const activasFilas = await query(
+      `SELECT c.id AS colmena_id, c.codigo AS colmena_codigo, a.nombre AS apiario_nombre,
+              MAX(i.fecha) AS ultima_fecha
+         FROM colmenas c
+         JOIN apiarios a ON a.id = c.apiario_id
+         LEFT JOIN inspecciones i ON i.colmena_id = c.id
+        WHERE a.usuario_id = ? AND c.estado = 'activa'
+        GROUP BY c.id, c.codigo, a.nombre`,
+      [usuarioId],
+    );
+    const proximas_inspecciones = activasFilas
+      .map((c) => ({
+        colmena_id: c.colmena_id,
+        colmena_codigo: c.colmena_codigo,
+        apiario_nombre: c.apiario_nombre,
+        dias_sin_inspeccion:
+          c.ultima_fecha === null ? 999 : Math.floor((hoy - new Date(c.ultima_fecha)) / DIAS_MS),
+      }))
+      .filter((c) => c.dias_sin_inspeccion > DIAS_INSPECCION_VENCIDA)
+      .sort((a, b) => b.dias_sin_inspeccion - a.dias_sin_inspeccion)
+      .slice(0, 10);
+
+    // --- Top colmenas por producción acumulada ------------------------------
+    const top_colmenas = await query(
+      `SELECT c.id AS colmena_id, c.codigo AS colmena_codigo, a.nombre AS apiario_nombre,
+              COALESCE(SUM(co.kg_miel), 0) AS kg_total
+         FROM colmenas c
+         JOIN apiarios a ON a.id = c.apiario_id
+         JOIN cosechas co ON co.colmena_id = c.id
+        WHERE a.usuario_id = ?
+        GROUP BY c.id, c.codigo, a.nombre
+        ORDER BY kg_total DESC
+        LIMIT 5`,
+      [usuarioId],
+    );
+
+    // --- Tipos de miel más producidos (top 5) -------------------------------
+    // Responde a "¿cuál miel es la más producida?" por tipo (azahar, mezquite…).
+    const tipos_miel = await query(
+      `SELECT co.tipo_miel, COALESCE(SUM(co.kg_miel), 0) AS kg
+         FROM cosechas co
+         JOIN colmenas c ON c.id = co.colmena_id
+         JOIN apiarios a ON a.id = c.apiario_id
+        WHERE a.usuario_id = ? AND co.tipo_miel IS NOT NULL AND co.tipo_miel <> ''
+        GROUP BY co.tipo_miel
+        ORDER BY kg DESC
+        LIMIT 5`,
+      [usuarioId],
+    );
+    tipos_miel.forEach((t) => {
+      t.kg = Number(t.kg);
+    });
+
     res.json({
       kpis: kpisFilas[0],
       produccion_mensual,
       distribucion_estado,
       alertas,
+      equipo,
+      proximas_inspecciones,
+      top_colmenas,
+      tipos_miel,
     });
   } catch (err) {
     next(err);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
-import useAuth from '../hooks/useAuth.js';
+import BotonWhatsApp from './BotonWhatsApp.jsx';
 
 /**
  * Layout principal: compone Navbar + Sidebar + <main>.
@@ -10,14 +10,13 @@ import useAuth from '../hooks/useAuth.js';
  */
 export default function Layout() {
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
-  const { usuario } = useAuth();
 
   const alternar = () => setSidebarAbierto((v) => !v);
   const cerrar = () => setSidebarAbierto(false);
 
   return (
     <div className={`app-layout${sidebarAbierto ? ' sidebar-abierto' : ''}`}>
-      <Navbar alAlternarSidebar={alternar} tituloUsuario={usuario?.nombre} />
+      <Navbar alAlternarSidebar={alternar} />
 
       <Sidebar alNavegar={cerrar} />
 
@@ -29,6 +28,9 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Contacto directo por WhatsApp, visible en todo el panel */}
+      <BotonWhatsApp mensaje="Hola, necesito ayuda con Apiario Digital." />
     </div>
   );
 }

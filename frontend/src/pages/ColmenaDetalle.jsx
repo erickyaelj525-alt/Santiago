@@ -11,6 +11,7 @@ import Modal from '../components/Modal.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Field from '../components/Field.jsx';
 import Badge from '../components/Badge.jsx';
+import { varianteEstado } from './ApiarioDetalle.jsx';
 import { formatearFecha, formatearFechaCorta, formatearKg, formatearNumero } from '../utils/format.js';
 
 const TIPOS_TRATAMIENTO = ['varroa', 'nosema', 'loque', 'otro'];
@@ -262,7 +263,25 @@ function TratamientoForm({ inicial, onGuardar, onCancelar, guardando }) {
     notas: inicial?.notas || '',
   });
   const [errores, setErrores] = useState({});
+  const [catalogoId, setCatalogoId] = useState('');
+  const { datos: catalogoDatos } = useFetch('/tratamientos/catalogo');
+  const catalogo = useMemo(() => catalogoDatos?.tratamientos || [], [catalogoDatos]);
+  const opciones = useMemo(() => catalogo.filter((c) => c.tipo === form.tipo), [catalogo, form.tipo]);
+  const elegido = useMemo(() => catalogo.find((c) => c.id === catalogoId), [catalogo, catalogoId]);
   const set = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }));
+
+  function cambiarTipo(e) {
+    setForm((f) => ({ ...f, tipo: e.target.value }));
+    setCatalogoId('');
+  }
+
+  /** Autocompleta producto y dosis desde la guía del catálogo. */
+  function usarCatalogo(e) {
+    const id = e.target.value;
+    setCatalogoId(id);
+    const item = catalogo.find((c) => c.id === id);
+    if (item) setForm((f) => ({ ...f, producto: item.producto, dosis: item.dosis }));
+  }
 
   function enviar(e) {
     e.preventDefault();
@@ -288,7 +307,7 @@ function TratamientoForm({ inicial, onGuardar, onCancelar, guardando }) {
     <form onSubmit={enviar} noValidate>
       <div className="grid grid--dos">
         <Field id="tra-tipo" label="Tipo" error={errores.tipo} requerido>
-          <select id="tra-tipo" className="select" value={form.tipo} onChange={set('tipo')}>
+          <select id="tra-tipo" className="select" value={form.tipo} onChange={cambiarTipo}>
             {TIPOS_TRATAMIENTO.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
@@ -296,6 +315,19 @@ function TratamientoForm({ inicial, onGuardar, onCancelar, guardando }) {
           <input id="tra-producto" className="input" value={form.producto} onChange={set('producto')} placeholder="Ácido oxálico" aria-invalid={Boolean(errores.producto)} />
         </Field>
       </div>
+
+      {opciones.length > 0 && (
+        <Field
+          id="tra-catalogo"
+          label="Guía del catálogo (opcional)"
+          ayuda={elegido ? `Cuándo aplicar: ${elegido.cuando}` : 'Elige un tratamiento y se llenan producto y dosis.'}
+        >
+          <select id="tra-catalogo" className="select" value={catalogoId} onChange={usarCatalogo}>
+            <option value="">— Elegir del catálogo —</option>
+            {opciones.map((c) => <option key={c.id} value={c.id}>{c.producto}</option>)}
+          </select>
+        </Field>
+      )}
 
       <Field id="tra-dosis" label="Dosis">
         <input id="tra-dosis" className="input" value={form.dosis} onChange={set('dosis')} placeholder="3 ml por colmena" />
@@ -384,7 +416,7 @@ export default function ColmenaDetalle() {
           </p>
         </div>
         <div className="acciones-fila">
-          <Badge variante={colmena.estado === 'activa' ? 'ok' : 'neutro'}>{colmena.estado}</Badge>
+          <Badge variante={varianteEstado(colmena.estado)}>{colmena.estado}</Badge>
           <Badge variante="info">{colmena.tipo}</Badge>
         </div>
       </div>
@@ -455,6 +487,11 @@ export default function ColmenaDetalle() {
                     <span>🌾 Polen: {siono(ins.alimento_polen)}</span>
                   </div>
                   {ins.notas && <p className="texto-pequeno mt-1" style={{ marginBottom: 0 }}>{ins.notas}</p>}
+                  {ins.creado_por_nombre && (
+                    <p className="texto-pequeno texto-suave mt-1" style={{ marginBottom: 0 }}>
+                      por {ins.creado_por_nombre}
+                    </p>
+                  )}
                   <div className="acciones-fila mt-2">
                     <button type="button" className="btn btn--pequeno btn--secundario" onClick={() => crudInsp.abrirEditar(ins)}>Editar</button>
                     <button type="button" className="btn btn--pequeno btn--peligro" onClick={() => crudInsp.setAEliminar(ins)}>Eliminar</button>
@@ -485,6 +522,7 @@ export default function ColmenaDetalle() {
                     <th scope="col">Kilos</th>
                     <th scope="col">Tipo</th>
                     <th scope="col">Humedad</th>
+                    <th scope="col">Registró</th>
                     <th scope="col">Acciones</th>
                   </tr>
                 </thead>
@@ -495,6 +533,9 @@ export default function ColmenaDetalle() {
                       <td data-label="Kilos"><strong>{formatearKg(c.kg_miel)}</strong></td>
                       <td data-label="Tipo">{c.tipo_miel || '—'}</td>
                       <td data-label="Humedad">{c.humedad_pct != null ? `${formatearNumero(c.humedad_pct, 1)}%` : '—'}</td>
+                      <td data-label="Registró" className="texto-suave texto-pequeno">
+                        {c.creado_por_nombre || '—'}
+                      </td>
                       <td data-label="Acciones">
                         <div className="acciones-fila">
                           <button type="button" className="btn btn--pequeno btn--secundario" onClick={() => crudCose.abrirEditar(c)}>Editar</button>
@@ -530,6 +571,7 @@ export default function ColmenaDetalle() {
                     <th scope="col">Dosis</th>
                     <th scope="col">Inicio</th>
                     <th scope="col">Fin</th>
+                    <th scope="col">Registró</th>
                     <th scope="col">Acciones</th>
                   </tr>
                 </thead>
@@ -544,6 +586,9 @@ export default function ColmenaDetalle() {
                         <td data-label="Inicio">{formatearFechaCorta(t.fecha_inicio)}</td>
                         <td data-label="Fin">
                           {t.fecha_fin ? formatearFechaCorta(t.fecha_fin) : <Badge variante="alerta">En curso</Badge>}
+                        </td>
+                        <td data-label="Registró" className="texto-suave texto-pequeno">
+                          {t.creado_por_nombre || '—'}
                         </td>
                         <td data-label="Acciones">
                           <div className="acciones-fila">

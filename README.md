@@ -19,12 +19,64 @@ alertas accionables**.
 
 Funciones de valor agregado (van más allá del mínimo solicitado):
 
+- **Página de inicio pública**: un panel informativo visible **antes de iniciar sesión**
+  con estadísticas agregadas y anónimas de la plataforma (kg de miel, colmenas,
+  inspecciones, producción mensual, tipos de miel). Consume `GET /api/publico/estadisticas`.
+- **Registro del dueño con verificación por correo**: cualquier apicultor crea su
+  cuenta de dueño; el sistema le envía un **código de 6 dígitos** al correo (vía SMTP)
+  y la cuenta queda inactiva hasta confirmarlo.
+- **Roles de dueño y trabajador**: el dueño administra la operación completa y da de
+  alta a sus trabajadores desde la sección **Equipo**; los trabajadores comparten la
+  operación con permisos controlados (no pueden eliminar apiarios ni gestionar al equipo).
+  Al dar de alta a un trabajador, se le envía **a su propio correo** un código de
+  verificación para activar su cuenta.
 - **Alertas inteligentes**: detecta inspecciones vencidas (> 14 días), varroa alto
   (nivel ≥ 4), riesgo de enjambrazón (celdas reales) y tratamientos sin cerrar.
 - **Clima apícola** (API externa Open-Meteo): indica si las condiciones son *óptimas*,
   de *precaución* o *no recomendadas* para abrir la colmena, con pronóstico a 5 días.
 - **Mapa de apiarios** con marcadores (Leaflet + OpenStreetMap).
-- **Tablero analítico** con KPIs, producción mensual de miel y distribución por estado.
+- **Tablero analítico** con KPIs, producción mensual de miel, distribución por estado,
+  actividad **por miembro del equipo**, próximas inspecciones pendientes y ranking de
+  colmenas más productivas.
+
+---
+
+## Roles y permisos
+
+El sistema distingue dos tipos de cuenta:
+
+| Rol | Quién es | Puede hacer |
+|-----|----------|-------------|
+| **Dueño** | Propietario de la operación apícola | Todo: crear, editar y **eliminar** apiarios/colmenas, registrar inspecciones, cosechas y tratamientos, y **gestionar a sus trabajadores** |
+| **Trabajador** | Cuenta que **crea el dueño** desde la sección "Equipo" | Permisos amplios: crear y editar apiarios/colmenas y registrar inspecciones, cosechas y tratamientos. **No** puede eliminar apiarios ni gestionar al equipo |
+
+Cómo funciona por dentro:
+
+- Cada cuenta de trabajador guarda `dueno_id` (a qué dueño pertenece). Los trabajadores
+  **no tienen datos propios**: operan sobre los apiarios de su dueño.
+- El backend resuelve el alcance con `propietarioId(req)` ([backend/src/utils/scope.js](backend/src/utils/scope.js)),
+  de modo que todas las consultas filtran por el dueño correcto.
+- Las rutas sensibles usan el middleware `requireRole('dueno')`.
+- Cada inspección, cosecha y tratamiento guarda `creado_por` (autor), lo que permite
+  mostrar la actividad por miembro del equipo en el dashboard.
+
+### Verificación por correo
+
+El **registro público crea siempre una cuenta de dueño**. Las cuentas de trabajadores
+**no** se auto-registran: las da de alta el dueño desde la sección "Equipo".
+
+**Ambos tipos de cuenta se verifican por correo** (el dueño al registrarse y el trabajador
+al ser creado por el dueño). El código llega siempre al correo del **usuario dueño de la
+cuenta**, nunca al del dueño que lo dio de alta:
+
+1. La cuenta se crea **sin verificar** (`email_verificado = 0`) con un `codigo_verificacion`
+   de 6 dígitos válido por 15 minutos.
+2. Se envía el código al correo del usuario vía **SMTP** (`backend/src/utils/mailer.js`).
+3. El usuario lo confirma en `POST /auth/verificar`; solo entonces puede iniciar sesión.
+
+> **Modo demo (sin SMTP)**: si no se configuran las variables `SMTP_*`, el código no se
+> envía por correo; en su lugar se imprime en la consola del servidor y se devuelve en la
+> respuesta (`codigo_demo`) para poder probar en local. Ver `backend/.env.example`.
 
 ---
 
@@ -101,12 +153,13 @@ npm install
 npm run dev
 ```
 
-### Usuario de demostración
+### Usuarios de demostración
 
-```
-Correo:    demo@apiario.mx
-Contraseña: demo1234
-```
+| Rol | Correo | Contraseña |
+|-----|--------|------------|
+| Dueño | `demo@apiario.mx` | `demo1234` |
+| Trabajador | `luis@apiario.mx` | `trabajador1234` |
+| Trabajador | `ana@apiario.mx` | `trabajador1234` |
 
 ---
 
@@ -117,11 +170,16 @@ Base: `http://localhost:4000/api` — Rutas protegidas requieren
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/auth/register` | Registro de apicultor |
-| POST | `/auth/login` | Inicio de sesión (devuelve JWT) |
-| GET | `/auth/me` | Usuario autenticado |
+| GET | `/publico/estadisticas` | **Público (sin token)**: estadísticas agregadas y anónimas para la página de inicio |
+| POST | `/auth/register` | Registro de la cuenta del **dueño**. Crea la cuenta sin verificar y envía un código al correo |
+| POST | `/auth/verificar` | Confirma el código de 6 dígitos del correo y devuelve el JWT |
+| POST | `/auth/reenviar-codigo` | Reenvía un nuevo código de verificación |
+| POST | `/auth/login` | Inicio de sesión (devuelve JWT). Rechaza con **403** si la cuenta no está verificada |
+| GET | `/auth/me` | Usuario autenticado (incluye su rol) |
+| GET/POST | `/trabajadores` | Listar / crear trabajadores (solo **dueño**). Al crear, envía un código de verificación al correo del trabajador |
+| PATCH/DELETE | `/trabajadores/:id` | Cambiar contraseña / eliminar trabajador (solo **dueño**) |
 | GET/POST | `/apiarios` | Listar / crear apiarios |
-| GET/PUT/DELETE | `/apiarios/:id` | Detalle / editar / eliminar |
+| GET/PUT/DELETE | `/apiarios/:id` | Detalle / editar / eliminar (eliminar solo **dueño**) |
 | GET/POST | `/colmenas` | Listar (filtro `?apiario_id=`) / crear |
 | GET/PUT/DELETE | `/colmenas/:id` | Detalle con historial / editar / eliminar |
 | GET/POST | `/inspecciones` | Inspecciones por colmena |

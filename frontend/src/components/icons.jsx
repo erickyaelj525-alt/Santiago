@@ -27,6 +27,12 @@ export const IconoColmena = (p) => (
 export const IconoPerfil = (p) => (
   <svg {...base} {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
 );
+export const IconoEquipo = (p) => (
+  <svg {...base} {...p}><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M16 5.5a3 3 0 0 1 0 5.6" /><path d="M17.5 14.7c2.1.6 3.5 2.2 3.5 4.3" /></svg>
+);
+export const IconoSalud = (p) => (
+  <svg {...base} {...p}><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z" /><path d="M12 8.5v6M9 11.5h6" /></svg>
+);
 export const IconoSalir = (p) => (
   <svg {...base} {...p}><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l-5-5 5-5" /><path d="M5 12h12" /></svg>
 );

@@ -7,7 +7,11 @@ import Field from '../components/Field.jsx';
 const emailValido = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /**
- * Registro de un nuevo apicultor con validación en cliente.
+ * Registro de la cuenta del DUEÑO del apiario, con validación en cliente.
+ * Las cuentas de trabajadores NO se crean aquí: una vez dentro, el dueño las
+ * da de alta desde la sección "Equipo".
+ * Al enviar se crea la cuenta SIN verificar y se envía un código al correo;
+ * el usuario es redirigido a la pantalla de verificación.
  */
 export default function Register() {
   const { register } = useAuth();
@@ -40,8 +44,16 @@ export default function Register() {
 
     setEnviando(true);
     try {
-      await register(nombre.trim(), email.trim(), password);
-      navigate('/dashboard', { replace: true });
+      const data = await register(nombre.trim(), email.trim(), password);
+      // Cuenta creada: pasamos a verificar el código enviado al correo.
+      navigate('/verificar', {
+        replace: true,
+        state: {
+          email: email.trim(),
+          correoConfigurado: data?.correo_configurado,
+          codigoDemo: data?.codigo_demo,
+        },
+      });
     } catch (err) {
       setErrorServidor(err.message || 'No se pudo completar el registro.');
       if (Array.isArray(err.details) && err.details.length) {
@@ -59,14 +71,17 @@ export default function Register() {
   return (
     <main className="auth-layout">
       <section className="auth-card" aria-labelledby="registro-titulo">
+        <Link to="/" className="auth-volver">← Volver al inicio</Link>
+
         <div className="auth-marca">
           <Logo size={40} />
           <span className="auth-marca__nombre">Apiario Digital</span>
         </div>
 
-        <h1 id="registro-titulo">Crea tu cuenta</h1>
+        <h1 id="registro-titulo">Crea la cuenta de tu apiario</h1>
         <p className="texto-suave texto-pequeno">
-          Empieza a digitalizar tu cuaderno de campo en minutos.
+          Registras tu cuenta de <strong>dueño</strong>. Te enviaremos un código de
+          verificación a tu correo para activarla.
         </p>
 
         {errorServidor && (
@@ -142,6 +157,11 @@ export default function Register() {
             {enviando ? 'Creando cuenta…' : 'Crear cuenta'}
           </button>
         </form>
+
+        <p className="texto-suave texto-pequeno mt-3">
+          Al entrar podrás crear las cuentas de tus trabajadores desde la sección
+          <strong> Equipo</strong>.
+        </p>
 
         <p className="texto-centro texto-pequeno mt-3">
           ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>

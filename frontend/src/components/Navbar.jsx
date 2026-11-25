@@ -1,12 +1,18 @@
 import { Link } from 'react-router-dom';
 import Logo from './Logo.jsx';
+import Badge from './Badge.jsx';
+import useAuth from '../hooks/useAuth.js';
+import { etiquetaRol } from '../utils/format.js';
 import { IconoMenu } from './icons.jsx';
 
 /**
  * Encabezado semántico de la aplicación.
- * Incluye skip-link accesible, botón de menú (móvil) y zona de acciones.
+ * Incluye skip-link accesible, botón de menú (móvil) y zona de acciones
+ * con el nombre y el rol del usuario en sesión.
  */
-export default function Navbar({ alAlternarSidebar, tituloUsuario }) {
+export default function Navbar({ alAlternarSidebar }) {
+  const { usuario, esDueno } = useAuth();
+
   return (
     <header className="navbar app-navbar">
       <a className="oculto-visual" href="#contenido-principal">
@@ -29,8 +35,13 @@ export default function Navbar({ alAlternarSidebar, tituloUsuario }) {
         </Link>
 
         <div className="navbar__acciones">
-          {tituloUsuario && (
-            <span className="texto-pequeno texto-suave navbar__titulo-corto">{tituloUsuario}</span>
+          {usuario && (
+            <span className="navbar__usuario">
+              <span className="texto-pequeno navbar__titulo-corto">
+                Hola, <strong>{usuario.nombre}</strong>
+              </span>
+              <Badge variante={esDueno ? 'alerta' : 'info'}>{etiquetaRol(usuario.rol)}</Badge>
+            </span>
           )}
         </div>
       </div>

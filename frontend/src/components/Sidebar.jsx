@@ -1,10 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth.js';
+import Badge from './Badge.jsx';
+import { etiquetaRol } from '../utils/format.js';
 import {
   IconoDashboard,
   IconoApiario,
   IconoColmena,
+  IconoSalud,
   IconoPerfil,
+  IconoEquipo,
   IconoSalir,
 } from './icons.jsx';
 
@@ -16,7 +20,7 @@ const clase = ({ isActive }) => `sidebar__enlace${isActive ? ' activo' : ''}`;
  * Los enlaces son navegables por teclado de forma natural.
  */
 export default function Sidebar({ alNavegar }) {
-  const { usuario, logout } = useAuth();
+  const { usuario, esDueno, logout } = useAuth();
   const navigate = useNavigate();
 
   function cerrarSesion() {
@@ -39,6 +43,15 @@ export default function Sidebar({ alNavegar }) {
         <NavLink to="/colmenas" className={clase} onClick={alNavegar}>
           <IconoColmena /> Colmenas
         </NavLink>
+        <NavLink to="/sanidad" className={clase} onClick={alNavegar}>
+          <IconoSalud /> Sanidad
+        </NavLink>
+        {/* El equipo solo lo gestiona el dueño de la operación. */}
+        {esDueno && (
+          <NavLink to="/equipo" className={clase} onClick={alNavegar}>
+            <IconoEquipo /> Equipo
+          </NavLink>
+        )}
 
         <span className="sidebar__grupo-titulo">Cuenta</span>
         <NavLink to="/perfil" className={clase} onClick={alNavegar}>
@@ -49,9 +62,12 @@ export default function Sidebar({ alNavegar }) {
         </button>
 
         {usuario && (
-          <p className="texto-pequeno texto-suave mt-3" style={{ padding: '0 0.85rem' }}>
-            Sesión: <strong>{usuario.nombre}</strong>
-          </p>
+          <div className="sidebar__sesion">
+            <span className="texto-pequeno texto-suave">
+              Sesión: <strong>{usuario.nombre}</strong>
+            </span>
+            <Badge variante={esDueno ? 'alerta' : 'info'}>{etiquetaRol(usuario.rol)}</Badge>
+          </div>
         )}
       </nav>
     </aside>

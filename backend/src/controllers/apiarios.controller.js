@@ -6,6 +6,7 @@
  */
 import { query } from '../config/db.js';
 import { HttpError, notFound } from '../utils/httpError.js';
+import { propietarioId } from '../utils/scope.js';
 
 // Columnas permitidas al actualizar un apiario (evita inyección por nombres de columna).
 const CAMPOS_ACTUALIZABLES = ['nombre', 'descripcion', 'lat', 'lng', 'municipio'];
@@ -27,7 +28,7 @@ export async function list(req, res, next) {
          FROM apiarios a
         WHERE a.usuario_id = ?
         ORDER BY a.created_at DESC, a.id DESC`,
-      [req.user.id],
+      [propietarioId(req)],
     );
     res.json(filas);
   } catch (err) {
@@ -42,7 +43,7 @@ export async function getById(req, res, next) {
     const filas = await query(
       `SELECT id, nombre, descripcion, lat, lng, municipio, created_at
          FROM apiarios WHERE id = ? AND usuario_id = ?`,
-      [id, req.user.id],
+      [id, propietarioId(req)],
     );
     if (filas.length === 0) throw notFound('Apiario no encontrado');
 
@@ -65,7 +66,7 @@ export async function create(req, res, next) {
     const resultado = await query(
       `INSERT INTO apiarios (usuario_id, nombre, descripcion, lat, lng, municipio)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [req.user.id, nombre, descripcion, lat, lng, municipio],
+      [propietarioId(req), nombre, descripcion, lat, lng, municipio],
     );
     const [apiario] = await query(
       `SELECT id, nombre, descripcion, lat, lng, municipio, created_at
@@ -86,7 +87,7 @@ export async function update(req, res, next) {
     // Verificamos pertenencia: si no es del usuario, respondemos 404 (no 403) para no filtrar existencia.
     const existe = await query('SELECT id FROM apiarios WHERE id = ? AND usuario_id = ?', [
       id,
-      req.user.id,
+      propietarioId(req),
     ]);
     if (existe.length === 0) throw notFound('Apiario no encontrado');
 
@@ -100,7 +101,7 @@ export async function update(req, res, next) {
     }
     if (sets.length === 0) throw new HttpError(400, 'No se enviaron campos para actualizar');
 
-    valores.push(id, req.user.id);
+    valores.push(id, propietarioId(req));
     await query(`UPDATE apiarios SET ${sets.join(', ')} WHERE id = ? AND usuario_id = ?`, valores);
 
     const [apiario] = await query(
@@ -120,7 +121,7 @@ export async function remove(req, res, next) {
     const id = parseId(req.params.id);
     const resultado = await query('DELETE FROM apiarios WHERE id = ? AND usuario_id = ?', [
       id,
-      req.user.id,
+      propietarioId(req),
     ]);
     if (resultado.affectedRows === 0) throw notFound('Apiario no encontrado');
     res.status(204).end();

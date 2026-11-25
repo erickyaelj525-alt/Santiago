@@ -70,6 +70,11 @@ const coordenada = (nombre, min, max) =>
 // ---------------------------------------------------------------------------
 // Autenticación
 // ---------------------------------------------------------------------------
+/**
+ * Registro público: SIEMPRE crea una cuenta de DUEÑO.
+ * Las cuentas de trabajadores no se auto-registran: las crea el dueño
+ * desde la sección "Equipo" (ver `trabajadorCrearSchema`).
+ */
 export const registroSchema = z.object({
   nombre: z
     .string()
@@ -80,9 +85,37 @@ export const registroSchema = z.object({
   password: z.string().min(6, MSG.passwordCorta).max(72, 'La contraseña es demasiado larga'),
 });
 
+/** Verificación de la cuenta con el código enviado por correo. */
+export const verificarSchema = z.object({
+  email: z.string().trim().toLowerCase().email(MSG.email),
+  codigo: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
+});
+
+/** Solicitar un nuevo código de verificación. */
+export const reenviarCodigoSchema = z.object({
+  email: z.string().trim().toLowerCase().email(MSG.email),
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(MSG.email),
   password: z.string().min(1, 'La contraseña es obligatoria'),
+});
+
+/**
+ * Cuenta de trabajador creada por el dueño.
+ * Mismas reglas que el registro (nombre, correo válido y contraseña segura).
+ */
+export const trabajadorCrearSchema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(120, 'El nombre es demasiado largo'),
+  email: z.string().trim().toLowerCase().email(MSG.email).max(160, 'El correo es demasiado largo'),
+  password: z.string().min(6, MSG.passwordCorta).max(72, 'La contraseña es demasiado larga'),
 });
 
 // ---------------------------------------------------------------------------
@@ -106,7 +139,7 @@ export const apiarioActualizarSchema = apiarioCrearSchema.partial();
 // Colmenas
 // ---------------------------------------------------------------------------
 const TIPOS_COLMENA = ['langstroth', 'top_bar', 'warre', 'otro'];
-const ESTADOS_COLMENA = ['activa', 'inactiva', 'perdida'];
+const ESTADOS_COLMENA = ['activa', 'débil', 'reina_nueva', 'vacía', 'enferma', 'muerta'];
 
 export const colmenaCrearSchema = z.object({
   apiario_id: z.coerce

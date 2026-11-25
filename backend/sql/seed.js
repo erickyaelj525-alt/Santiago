@@ -50,12 +50,12 @@ const COLMENAS = [
   { apiario: 0, codigo: 'LS-01', tipo: 'langstroth', estado: 'activa', reina_marcada: 1, notas: 'Colonia fuerte en producción' },
   { apiario: 0, codigo: 'LS-02', tipo: 'langstroth', estado: 'activa', reina_marcada: 1, notas: null },
   { apiario: 0, codigo: 'LS-03', tipo: 'langstroth', estado: 'activa', reina_marcada: 0, notas: null },
-  { apiario: 0, codigo: 'LS-04', tipo: 'langstroth', estado: 'inactiva', reina_marcada: 0, notas: 'Colonia débil, en recuperación' },
+  { apiario: 0, codigo: 'LS-04', tipo: 'langstroth', estado: 'débil', reina_marcada: 0, notas: 'Colonia débil, en recuperación' },
   { apiario: 0, codigo: 'LS-05', tipo: 'top_bar', estado: 'activa', reina_marcada: 1, notas: null },
   { apiario: 1, codigo: 'VD-01', tipo: 'langstroth', estado: 'activa', reina_marcada: 1, notas: null },
   { apiario: 1, codigo: 'VD-02', tipo: 'langstroth', estado: 'activa', reina_marcada: 0, notas: null },
   { apiario: 1, codigo: 'VD-03', tipo: 'warre', estado: 'activa', reina_marcada: 0, notas: null },
-  { apiario: 1, codigo: 'VD-04', tipo: 'langstroth', estado: 'perdida', reina_marcada: 0, notas: 'Colmena perdida por saqueo' },
+  { apiario: 1, codigo: 'VD-04', tipo: 'langstroth', estado: 'muerta', reina_marcada: 0, notas: 'Colmena perdida por saqueo' },
   { apiario: 2, codigo: 'CC-01', tipo: 'langstroth', estado: 'activa', reina_marcada: 1, notas: null },
   { apiario: 2, codigo: 'CC-02', tipo: 'langstroth', estado: 'activa', reina_marcada: 1, notas: 'Revisar varroa con frecuencia' },
   { apiario: 2, codigo: 'CC-03', tipo: 'top_bar', estado: 'activa', reina_marcada: 0, notas: 'Recién instalada' },
@@ -90,14 +90,40 @@ async function main() {
     return;
   }
 
-  // 1) Usuario demo ---------------------------------------------------------
+  // 1) Usuario demo (DUEÑO) -------------------------------------------------
+  // email_verificado = 1 para que las cuentas demo puedan iniciar sesión sin
+  // pasar por el código de verificación por correo.
   const passwordHash = await bcrypt.hash('demo1234', 10);
   const usuarioRes = await query(
-    'INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
-    ['Apicultor Demo', EMAIL_DEMO, passwordHash, 'apicultor'],
+    'INSERT INTO usuarios (nombre, email, password_hash, rol, email_verificado) VALUES (?, ?, ?, ?, 1)',
+    ['Apicultor Demo', EMAIL_DEMO, passwordHash, 'dueno'],
   );
   const usuarioId = usuarioRes.insertId;
-  console.log(`✔ Usuario demo creado (${EMAIL_DEMO} / demo1234)`);
+  console.log(`✔ Usuario dueño demo creado (${EMAIL_DEMO} / demo1234)`);
+
+  // 1b) Trabajadores del dueño demo -----------------------------------------
+  // Comparten los apiarios del dueño; su creado_por alimenta las estadísticas.
+  const TRABAJADORES = [
+    { nombre: 'Luis Ramírez', email: 'luis@apiario.mx' },
+    { nombre: 'Ana Torres', email: 'ana@apiario.mx' },
+  ];
+  const hashTrabajador = await bcrypt.hash('trabajador1234', 10);
+
+  // Autores posibles de inspecciones/cosechas/tratamientos: dueño + trabajadores.
+  const equipoIds = [usuarioId];
+  for (const t of TRABAJADORES) {
+    const res = await query(
+      `INSERT INTO usuarios (nombre, email, password_hash, rol, dueno_id, email_verificado)
+       VALUES (?, ?, ?, 'trabajador', ?, 1)`,
+      [t.nombre, t.email, hashTrabajador, usuarioId],
+    );
+    equipoIds.push(res.insertId);
+  }
+  console.log(`✔ ${TRABAJADORES.length} trabajadores creados (luis@apiario.mx / ana@apiario.mx · trabajador1234)`);
+
+  // Reparte los registros entre el dueño y sus trabajadores (rotación simple).
+  let autorIdx = 0;
+  const siguienteAutor = () => equipoIds[autorIdx++ % equipoIds.length];
 
   // 2) Apiarios -------------------------------------------------------------
   const apiarioIds = [];
@@ -145,8 +171,8 @@ async function main() {
         await query(
           `INSERT INTO inspecciones
              (colmena_id, fecha, poblacion, temperamento, presencia_reina, celdas_reales,
-              nivel_varroa, alimento_miel, alimento_polen, clima_temp, notas)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              nivel_varroa, alimento_miel, alimento_polen, clima_temp, notas, creado_por)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             colmenaId,
             fechaISO(v.dias),
@@ -159,6 +185,7 @@ async function main() {
             v.dias % 2 === 0 ? 1 : 0,
             18 + (i % 8),
             v.celdas ? 'Se observaron celdas reales, vigilar enjambrazón' : null,
+            siguienteAutor(),
           ],
         );
         totalInspecciones += 1;
@@ -170,8 +197,8 @@ async function main() {
       for (let k = 0; k < 6; k += 1) {
         const kg = Number((6 + ((i + k) % 5) * 2.5 + (k % 2) * 1.3).toFixed(2));
         await query(
-          `INSERT INTO cosechas (colmena_id, fecha, kg_miel, tipo_miel, humedad_pct, notas)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO cosechas (colmena_id, fecha, kg_miel, tipo_miel, humedad_pct, notas, creado_por)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             colmenaId,
             fechaISO(15 + k * 60),
@@ -179,6 +206,7 @@ async function main() {
             TIPOS_MIEL[(i + k) % TIPOS_MIEL.length],
             Number((17 + (k % 3) * 0.5).toFixed(1)),
             null,
+            siguienteAutor(),
           ],
         );
         totalCosechas += 1;
@@ -188,33 +216,33 @@ async function main() {
     // Tratamientos específicos para generar variedad (incluye uno o dos abiertos).
     if (col.codigo === 'VD-01') {
       await query(
-        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas)
-         VALUES (?, 'varroa', 'Ácido oxálico', '35 ml por colmena', ?, NULL, ?)`,
-        [colmenaId, fechaISO(10), 'Tratamiento en curso'],
+        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas, creado_por)
+         VALUES (?, 'varroa', 'Ácido oxálico', '35 ml por colmena', ?, NULL, ?, ?)`,
+        [colmenaId, fechaISO(10), 'Tratamiento en curso', siguienteAutor()],
       );
       totalTratamientos += 1;
     }
     if (col.codigo === 'CC-02') {
       await query(
-        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas)
-         VALUES (?, 'varroa', 'Timol gel', '1 placa', ?, NULL, ?)`,
-        [colmenaId, fechaISO(4), 'Varroa elevada, tratamiento en curso'],
+        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas, creado_por)
+         VALUES (?, 'varroa', 'Timol gel', '1 placa', ?, NULL, ?, ?)`,
+        [colmenaId, fechaISO(4), 'Varroa elevada, tratamiento en curso', siguienteAutor()],
       );
       totalTratamientos += 1;
     }
     if (col.codigo === 'LS-01') {
       await query(
-        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas)
-         VALUES (?, 'varroa', 'Apiguard', '1 placa', ?, ?, ?)`,
-        [colmenaId, fechaISO(60), fechaISO(45), 'Tratamiento de otoño finalizado'],
+        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas, creado_por)
+         VALUES (?, 'varroa', 'Apiguard', '1 placa', ?, ?, ?, ?)`,
+        [colmenaId, fechaISO(60), fechaISO(45), 'Tratamiento de otoño finalizado', siguienteAutor()],
       );
       totalTratamientos += 1;
     }
     if (col.codigo === 'LS-04') {
       await query(
-        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas)
-         VALUES (?, 'nosema', 'Fumagilina', '1 g por litro', ?, ?, ?)`,
-        [colmenaId, fechaISO(40), fechaISO(35), 'Control de nosema finalizado'],
+        `INSERT INTO tratamientos (colmena_id, tipo, producto, dosis, fecha_inicio, fecha_fin, notas, creado_por)
+         VALUES (?, 'nosema', 'Fumagilina', '1 g por litro', ?, ?, ?, ?)`,
+        [colmenaId, fechaISO(40), fechaISO(35), 'Control de nosema finalizado', siguienteAutor()],
       );
       totalTratamientos += 1;
     }
@@ -226,8 +254,9 @@ async function main() {
   console.log(`✔ ${totalTratamientos} tratamientos creados`);
   console.log('--------------------------------------------------');
   console.log('  Datos demo listos. Inicia sesión con:');
-  console.log('    email:    demo@apiario.mx');
-  console.log('    password: demo1234');
+  console.log('    dueño:      demo@apiario.mx      / demo1234');
+  console.log('    trabajador: luis@apiario.mx      / trabajador1234');
+  console.log('    trabajador: ana@apiario.mx       / trabajador1234');
   console.log('--------------------------------------------------');
 
   await pool.end();

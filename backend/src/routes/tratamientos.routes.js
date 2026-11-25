@@ -9,6 +9,8 @@ const router = Router();
 
 router.use(requireAuth);
 
+// Catálogo de referencia (debe ir antes de rutas con parámetros).
+router.get('/catalogo', ctrl.catalogo);
 router.get('/', ctrl.list);
 router.post('/', validate(tratamientoCrearSchema), ctrl.create);
 router.put('/:id', validate(tratamientoActualizarSchema), ctrl.update);

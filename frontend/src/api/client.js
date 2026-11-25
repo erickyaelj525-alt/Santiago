@@ -35,10 +35,12 @@ export class ApiError extends Error {
 /**
  * Realiza una petición al backend.
  * @param {string} ruta - ruta relativa, p.ej. '/apiarios'
- * @param {object} opciones - { method, body, headers }
+ * @param {object} opciones - { method, body, headers, publico }
+ *   `publico: true` evita adjuntar el token y no dispara el cierre de sesión
+ *   automático (para endpoints anónimos).
  */
-async function request(ruta, { method = 'GET', body, headers = {} } = {}) {
-  const token = getToken();
+async function request(ruta, { method = 'GET', body, headers = {}, publico = false } = {}) {
+  const token = publico ? null : getToken();
 
   const opciones = {
     method,
@@ -67,9 +69,9 @@ async function request(ruta, { method = 'GET', body, headers = {} } = {}) {
     );
   }
 
-  // Sesión expirada o inválida.
+  // Sesión expirada o inválida (no aplica a peticiones públicas).
   if (res.status === 401) {
-    if (onUnauthorized) onUnauthorized();
+    if (!publico && onUnauthorized) onUnauthorized();
     // Se intenta leer el mensaje del backend para mostrarlo igual.
     let mensaje = 'Tu sesión expiró. Inicia sesión de nuevo.';
     try {
@@ -108,6 +110,10 @@ async function request(ruta, { method = 'GET', body, headers = {} } = {}) {
 export const get = (ruta) => request(ruta, { method: 'GET' });
 export const post = (ruta, body) => request(ruta, { method: 'POST', body });
 export const put = (ruta, body) => request(ruta, { method: 'PUT', body });
+export const patch = (ruta, body) => request(ruta, { method: 'PATCH', body });
 export const del = (ruta) => request(ruta, { method: 'DELETE' });
 
-export default { get, post, put, del, getToken, setToken, setUnauthorizedHandler, ApiError };
+/** GET a un endpoint público: no envía token ni afecta la sesión. */
+export const getPublico = (ruta) => request(ruta, { method: 'GET', publico: true });
+
+export default { get, getPublico, post, put, patch, del, getToken, setToken, setUnauthorizedHandler, ApiError };
