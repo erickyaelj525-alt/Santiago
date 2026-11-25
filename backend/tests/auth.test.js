@@ -34,7 +34,7 @@ describe('Autenticación (integración)', () => {
     expect(res.status).toBe(201);
     expect(res.body.token).toBeUndefined();
     expect(res.body.email).toBe(emailPrueba);
-    // Sin SMTP configurado, el backend expone el código para poder probar.
+    // Sin Resend configurado, el backend expone el código en modo demo local.
     expect(res.body.codigo_demo).toMatch(/^\d{6}$/);
     codigoDemo = res.body.codigo_demo;
   });

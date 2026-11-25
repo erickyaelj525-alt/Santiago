@@ -23,7 +23,7 @@ Funciones de valor agregado (van más allá del mínimo solicitado):
   con estadísticas agregadas y anónimas de la plataforma (kg de miel, colmenas,
   inspecciones, producción mensual, tipos de miel). Consume `GET /api/publico/estadisticas`.
 - **Registro del dueño con verificación por correo**: cualquier apicultor crea su
-  cuenta de dueño; el sistema le envía un **código de 6 dígitos** al correo (vía SMTP)
+  cuenta de dueño; el sistema le envía un **código de 6 dígitos** al correo (vía Resend)
   y la cuenta queda inactiva hasta confirmarlo.
 - **Roles de dueño y trabajador**: el dueño administra la operación completa y da de
   alta a sus trabajadores desde la sección **Equipo**; los trabajadores comparten la
@@ -71,12 +71,13 @@ cuenta**, nunca al del dueño que lo dio de alta:
 
 1. La cuenta se crea **sin verificar** (`email_verificado = 0`) con un `codigo_verificacion`
    de 6 dígitos válido por 15 minutos.
-2. Se envía el código al correo del usuario vía **SMTP** (`backend/src/utils/mailer.js`).
+2. Se envía el código mediante la API HTTP de **Resend** (`backend/src/utils/mailer.js`).
 3. El usuario lo confirma en `POST /auth/verificar`; solo entonces puede iniciar sesión.
 
-> **Modo demo (sin SMTP)**: si no se configuran las variables `SMTP_*`, el código no se
-> envía por correo; en su lugar se imprime en la consola del servidor y se devuelve en la
-> respuesta (`codigo_demo`) para poder probar en local. Ver `backend/.env.example`.
+> **Desarrollo local**: si no se configuran `RESEND_API_KEY` y `RESEND_FROM`, el código
+> se imprime en la consola del servidor y se devuelve como `codigo_demo`. En producción,
+> el backend requiere ambas variables y falla explícitamente si faltan. Ver
+> `backend/.env.example`.
 
 ---
 
@@ -231,8 +232,21 @@ Incluye pruebas **unitarias** (esquemas de validación, JWT) y de **integración
 
 ## Despliegue (resumen)
 
-1. **Backend**: en un hosting con Node (Render, Railway, VPS) o cPanel con "Setup Node.js App".
-   Configura las variables de `backend/.env` y un MySQL accesible.
-2. **Frontend**: `npm run build` y publica la carpeta `dist/` en un hosting estático
-   (Vercel, Netlify) apuntando `VITE_API_URL` a la URL pública del backend.
+1. **Backend**: crea un **Web Service** en Render conectado al repositorio `Santiago`,
+   con `backend` como Root Directory, `npm ci` como Build Command y `npm start`
+   como Start Command. Configura las variables de `backend/.env` y un MySQL accesible.
+   `CLIENT_URL` debe ser
+   el origen público exacto del frontend (para esta publicación:
+   `https://santiago-97cb.onrender.com`), sin
+   ruta ni `/` final, para que CORS permita las peticiones del navegador.
+2. **Correo en Render**: crea una API key en Resend y verifica el dominio del remitente.
+   En el Web Service del backend agrega `RESEND_API_KEY` y `RESEND_FROM` (por ejemplo,
+   `Apiario Digital <verificaciones@tu-dominio-verificado.mx>`). Los puertos SMTP no son
+   necesarios; el backend envía por HTTPS a la API de Resend.
+3. **Frontend**: en tu Static Site agrega `VITE_API_URL` con el prefijo `/api` y la URL
+   pública que Render asigne al Web Service (por ejemplo,
+   `https://mi-api.onrender.com/api`); no uses `localhost` en producción. Vite incorpora
+   esta variable durante el build, así que vuelve a desplegar el frontend después de
+   cambiarla. Usa `CLIENT_URL=https://santiago-97cb.onrender.com` en el backend, y vuelve
+   a desplegar ambos servicios después de guardar las variables.
 # Santiago

@@ -62,7 +62,7 @@ describe('Sistema de roles (dueño / trabajador)', () => {
       email_verificado: 0,
     });
     expect(res.body.password_hash).toBeUndefined();
-    // Sin SMTP configurado, el backend expone el código para poder probar.
+    // Sin Resend configurado, el backend expone el código en modo demo local.
     expect(res.body.codigo_demo).toMatch(/^\d{6}$/);
     codigoTrabajador = res.body.codigo_demo;
     trabajadorId = res.body.id;

@@ -48,7 +48,7 @@ export async function register(req, res, next) {
       mensaje: 'Te enviamos un código de verificación a tu correo.',
       email,
       correo_configurado: !envio.demo,
-      // En modo demo (sin SMTP) devolvemos el código para poder probar en local.
+      // En modo demo local (sin Resend) devolvemos el código para poder probar.
       ...(envio.demo ? { codigo_demo: codigo } : {}),
     });
   } catch (err) {

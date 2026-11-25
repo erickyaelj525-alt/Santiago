@@ -84,7 +84,7 @@ export async function create(req, res, next) {
       ...trabajador,
       mensaje: 'Trabajador creado. Le enviamos un código de verificación a su correo.',
       correo_configurado: !envio.demo,
-      // En modo demo (sin SMTP) devolvemos el código para poder probar en local.
+      // En modo demo local (sin Resend) devolvemos el código para poder probar.
       ...(envio.demo ? { codigo_demo: codigo } : {}),
     });
   } catch (err) {
