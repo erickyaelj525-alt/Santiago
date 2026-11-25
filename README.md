@@ -235,3 +235,4 @@ Incluye pruebas **unitarias** (esquemas de validación, JWT) y de **integración
    Configura las variables de `backend/.env` y un MySQL accesible.
 2. **Frontend**: `npm run build` y publica la carpeta `dist/` en un hosting estático
    (Vercel, Netlify) apuntando `VITE_API_URL` a la URL pública del backend.
+# Santiago
