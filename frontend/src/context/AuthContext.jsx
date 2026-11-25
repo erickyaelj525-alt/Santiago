@@ -15,7 +15,7 @@ function extraerSesion(data) {
   const mensaje = respuesta?.mensaje || respuesta?.message;
 
   if (typeof respuesta?.token !== 'string' || !respuesta.token.trim()) {
-    throw new Error(mensaje || 'El servidor no devolvió el token de autenticación.');
+    throw new Error(mensaje || 'No se pudo completar la autenticación.');
   }
   if (!respuesta.usuario || typeof respuesta.usuario !== 'object' || Array.isArray(respuesta.usuario)) {
     throw new Error(mensaje || 'El servidor no devolvió los datos del usuario.');

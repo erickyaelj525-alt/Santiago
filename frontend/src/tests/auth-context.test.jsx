@@ -58,7 +58,7 @@ describe('AuthContext: registro sin verificación por correo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'El servidor no devolvió el token de autenticación.',
+      'No se pudo completar la autenticación.',
     );
     expect(storage.getItem('apiario_token')).toBeNull();
   });
