@@ -91,8 +91,7 @@ async function main() {
   }
 
   // 1) Usuario demo (DUEÑO) -------------------------------------------------
-  // email_verificado = 1 para que las cuentas demo puedan iniciar sesión sin
-  // pasar por el código de verificación por correo.
+  // Las cuentas demo se crean activas y pueden iniciar sesión directamente.
   const passwordHash = await bcrypt.hash('demo1234', 10);
   const usuarioRes = await query(
     'INSERT INTO usuarios (nombre, email, password_hash, rol, email_verificado) VALUES (?, ?, ?, ?, 1)',

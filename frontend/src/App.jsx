@@ -6,7 +6,6 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Inicio from './pages/Inicio.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
-import Verificar from './pages/Verificar.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Apiarios from './pages/Apiarios.jsx';
 import ApiarioDetalle from './pages/ApiarioDetalle.jsx';
@@ -29,7 +28,6 @@ export default function App() {
       <Route path="/" element={<Inicio />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Register />} />
-      <Route path="/verificar" element={<Verificar />} />
 
       {/* Rutas protegidas (requieren sesión) */}
       <Route

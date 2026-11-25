@@ -15,16 +15,12 @@ let apiarioId;
 let colmenaId;
 
 beforeAll(async () => {
-  // Registro + verificación del código (el registro ya no devuelve token).
+  // El registro crea la cuenta y la sesión directamente.
   const registro = await request(app)
     .post('/api/auth/register')
     .send({ nombre: 'Usuario CRUD', email: emailPrueba, password: 'secreto123' });
 
-  const verificacion = await request(app)
-    .post('/api/auth/verificar')
-    .send({ email: emailPrueba, codigo: registro.body.codigo_demo });
-
-  token = verificacion.body.token;
+  token = registro.body.token;
 });
 
 afterAll(async () => {

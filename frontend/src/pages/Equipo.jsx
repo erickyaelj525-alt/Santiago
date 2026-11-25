@@ -82,7 +82,7 @@ function TrabajadorForm({ onGuardar, onCancelar, guardando }) {
         id="trb-password"
         label="Contraseña"
         error={errores.password}
-        ayuda="Al menos 6 caracteres. Le enviaremos un código a su correo para verificar su cuenta."
+        ayuda="Al menos 6 caracteres."
         requerido
       >
         <input
@@ -179,13 +179,8 @@ export default function Equipo() {
     const { setErrores, ...cuerpo } = valores;
     setGuardando(true);
     try {
-      const data = await post('/trabajadores', cuerpo);
-      // En modo demo el backend devuelve el código para poder probarlo en local.
-      if (data?.codigo_demo) {
-        toast.info(`Trabajador creado. Modo demo (sin correo): su código es ${data.codigo_demo}`);
-      } else {
-        toast.exito('Trabajador creado. Le enviamos un código de verificación a su correo.');
-      }
+      await post('/trabajadores', cuerpo);
+      toast.exito('Trabajador creado. Ya puede iniciar sesión.');
       setModalCrear(false);
       await refetch();
     } catch (err) {
@@ -304,11 +299,7 @@ export default function Equipo() {
                         <Badge variante={varianteRol(m.rol)}>{etiquetaRol(m.rol)}</Badge>
                       </td>
                       <td data-label="Estado">
-                        {m.email_verificado ? (
-                          <Badge variante="ok">Verificado</Badge>
-                        ) : (
-                          <Badge variante="alerta">Pendiente de correo</Badge>
-                        )}
+                        <Badge variante="ok">Activo</Badge>
                       </td>
                       <td data-label="Inspecciones">{m.inspecciones_registradas ?? 0}</td>
                       <td data-label="Última actividad">{formatearFecha(m.ultima_actividad)}</td>

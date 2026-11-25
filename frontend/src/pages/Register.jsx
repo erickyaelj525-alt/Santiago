@@ -10,8 +10,6 @@ const emailValido = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
  * Registro de la cuenta del DUEÑO del apiario, con validación en cliente.
  * Las cuentas de trabajadores NO se crean aquí: una vez dentro, el dueño las
  * da de alta desde la sección "Equipo".
- * Al enviar se crea la cuenta SIN verificar y se envía un código al correo;
- * el usuario es redirigido a la pantalla de verificación.
  */
 export default function Register() {
   const { register } = useAuth();
@@ -44,16 +42,8 @@ export default function Register() {
 
     setEnviando(true);
     try {
-      const data = await register(nombre.trim(), email.trim(), password);
-      // Cuenta creada: pasamos a verificar el código enviado al correo.
-      navigate('/verificar', {
-        replace: true,
-        state: {
-          email: email.trim(),
-          correoConfigurado: data?.correo_configurado,
-          codigoDemo: data?.codigo_demo,
-        },
-      });
+      await register(nombre.trim(), email.trim(), password);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setErrorServidor(err.message || 'No se pudo completar el registro.');
       if (Array.isArray(err.details) && err.details.length) {
@@ -80,8 +70,7 @@ export default function Register() {
 
         <h1 id="registro-titulo">Crea la cuenta de tu apiario</h1>
         <p className="texto-suave texto-pequeno">
-          Registras tu cuenta de <strong>dueño</strong>. Te enviaremos un código de
-          verificación a tu correo para activarla.
+          Registra tu cuenta de <strong>dueño</strong> para empezar a gestionar tu apiario.
         </p>
 
         {errorServidor && (

@@ -21,7 +21,6 @@ const TRABAJADOR_PASSWORD = 'trabajador1234';
 let tokenDueno;
 let tokenTrabajador;
 let trabajadorId;
-let codigoTrabajador;
 let apiarioId;
 
 beforeAll(async () => {
@@ -45,7 +44,7 @@ afterAll(async () => {
 });
 
 describe('Sistema de roles (dueño / trabajador)', () => {
-  it('a) el dueño crea un trabajador sin verificar y con código enviado (201)', async () => {
+  it('a) el dueño crea un trabajador activo inmediatamente (201)', async () => {
     const res = await request(app)
       .post('/api/trabajadores')
       .set('Authorization', `Bearer ${tokenDueno}`)
@@ -59,22 +58,12 @@ describe('Sistema de roles (dueño / trabajador)', () => {
     expect(res.body).toMatchObject({
       email: TRABAJADOR_EMAIL,
       rol: 'trabajador',
-      email_verificado: 0,
     });
     expect(res.body.password_hash).toBeUndefined();
-    // Sin Resend configurado, el backend expone el código en modo demo local.
-    expect(res.body.codigo_demo).toMatch(/^\d{6}$/);
-    codigoTrabajador = res.body.codigo_demo;
     trabajadorId = res.body.id;
   });
 
-  it('b) el trabajador verifica su correo y ve los apiarios del dueño (200) pero no gestiona el equipo (403)', async () => {
-    // La cuenta del trabajador nace sin verificar: primero confirma el código.
-    const verificacion = await request(app)
-      .post('/api/auth/verificar')
-      .send({ email: TRABAJADOR_EMAIL, codigo: codigoTrabajador });
-    expect(verificacion.status).toBe(200);
-
+  it('b) el trabajador inicia sesión y ve apiarios del dueño, pero no gestiona el equipo', async () => {
     const login = await request(app)
       .post('/api/auth/login')
       .send({ email: TRABAJADOR_EMAIL, password: TRABAJADOR_PASSWORD });

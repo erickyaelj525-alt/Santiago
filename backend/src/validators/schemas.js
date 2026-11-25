@@ -85,20 +85,6 @@ export const registroSchema = z.object({
   password: z.string().min(6, MSG.passwordCorta).max(72, 'La contraseña es demasiado larga'),
 });
 
-/** Verificación de la cuenta con el código enviado por correo. */
-export const verificarSchema = z.object({
-  email: z.string().trim().toLowerCase().email(MSG.email),
-  codigo: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
-});
-
-/** Solicitar un nuevo código de verificación. */
-export const reenviarCodigoSchema = z.object({
-  email: z.string().trim().toLowerCase().email(MSG.email),
-});
-
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(MSG.email),
   password: z.string().min(1, 'La contraseña es obligatoria'),

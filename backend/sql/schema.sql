@@ -22,9 +22,9 @@ CREATE TABLE usuarios (
   password_hash VARCHAR(255)  NOT NULL,
   rol           ENUM('dueno','trabajador') NOT NULL DEFAULT 'dueno',
   dueno_id      INT           NULL,  -- dueño al que pertenece un trabajador (NULL si es dueño)
-  email_verificado    TINYINT(1) NOT NULL DEFAULT 0,  -- 1 cuando confirma el código enviado a su correo
-  codigo_verificacion VARCHAR(6) NULL,                -- código de 6 dígitos (se borra al verificar)
-  codigo_expira       DATETIME   NULL,                -- vigencia del código
+  email_verificado    TINYINT(1) NOT NULL DEFAULT 1,  -- Campo legacy, ya no bloquea el acceso
+  codigo_verificacion VARCHAR(6) NULL,                -- Campo legacy, ya no se usa
+  codigo_expira       DATETIME   NULL,                -- Campo legacy, ya no se usa
   created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuario_dueno FOREIGN KEY (dueno_id)
     REFERENCES usuarios(id) ON DELETE CASCADE,

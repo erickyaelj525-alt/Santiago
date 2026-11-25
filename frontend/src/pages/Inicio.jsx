@@ -81,7 +81,7 @@ const PASOS = [
   {
     numero: '1',
     titulo: 'Crea tu cuenta',
-    texto: 'Regístrate como dueño de tu apiario y confirma tu correo con un código de verificación.',
+    texto: 'Regístrate como dueño y empieza a gestionar tu apiario de inmediato.',
   },
   {
     numero: '2',

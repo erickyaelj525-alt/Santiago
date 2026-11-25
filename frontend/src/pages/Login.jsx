@@ -20,7 +20,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [errores, setErrores] = useState({});
   const [errorServidor, setErrorServidor] = useState('');
-  const [sinVerificar, setSinVerificar] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   function validar() {
@@ -36,7 +35,6 @@ export default function Login() {
   async function manejarEnvio(e) {
     e.preventDefault();
     setErrorServidor('');
-    setSinVerificar(false);
     if (!validar()) return;
 
     setEnviando(true);
@@ -46,8 +44,6 @@ export default function Login() {
     } catch (err) {
       // Muestra el mensaje del backend y los detalles de validación campo a campo.
       setErrorServidor(err.message || 'No se pudo iniciar sesión.');
-      // 403: la cuenta existe pero aún no confirmó el código de su correo.
-      if (err.status === 403) setSinVerificar(true);
       if (Array.isArray(err.details) && err.details.length) {
         const porCampo = {};
         err.details.forEach((d) => {
@@ -78,13 +74,6 @@ export default function Login() {
         {errorServidor && (
           <div className="aviso aviso--error" role="alert" style={{ marginBottom: '1rem' }}>
             {errorServidor}
-            {sinVerificar && (
-              <div style={{ marginTop: '0.5rem' }}>
-                <Link to="/verificar" state={{ email: email.trim() }}>
-                  Verificar mi cuenta ahora →
-                </Link>
-              </div>
-            )}
           </div>
         )}
 

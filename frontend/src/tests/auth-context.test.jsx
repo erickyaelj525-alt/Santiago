@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { AuthProvider } from '../context/AuthContext.jsx';
 import useAuth from '../hooks/useAuth.js';
 
-function VerificarSesionPrueba() {
-  const { verificar, usuario } = useAuth();
+function RegistrarSesionPrueba() {
+  const { register, usuario } = useAuth();
   const [error, setError] = useState('');
 
-  async function verificarCuenta() {
+  async function registrarCuenta() {
     try {
-      await verificar('apicultor@ejemplo.com', '123456');
+      await register('Apicultor', 'apicultor@ejemplo.com', 'secreto123');
     } catch (err) {
       setError(err.message);
     }
@@ -18,7 +18,7 @@ function VerificarSesionPrueba() {
 
   return (
     <>
-      <button onClick={verificarCuenta}>Verificar</button>
+      <button onClick={registrarCuenta}>Registrar</button>
       {error && <p role="alert">{error}</p>}
       {usuario && <p>{usuario.email}</p>}
     </>
@@ -41,8 +41,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('AuthContext: verificación de cuenta', () => {
-  it('muestra un error y no guarda sesión si la respuesta no trae token', async () => {
+describe('AuthContext: registro sin verificación por correo', () => {
+  it('muestra un error y no guarda sesión si registro no devuelve token', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
@@ -51,11 +51,11 @@ describe('AuthContext: verificación de cuenta', () => {
 
     render(
       <AuthProvider>
-        <VerificarSesionPrueba />
+        <RegistrarSesionPrueba />
       </AuthProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'El servidor no devolvió el token de autenticación.',
@@ -63,25 +63,23 @@ describe('AuthContext: verificación de cuenta', () => {
     expect(storage.getItem('apiario_token')).toBeNull();
   });
 
-  it('acepta token y usuario dentro de data y guarda la sesión', async () => {
+  it('inicia sesión inmediatamente al registrar la cuenta', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
       text: async () => JSON.stringify({
-        data: {
-          token: 'jwt-de-prueba',
-          usuario: { email: 'apicultor@ejemplo.com', rol: 'dueno' },
-        },
+        token: 'jwt-de-prueba',
+        usuario: { email: 'apicultor@ejemplo.com', rol: 'dueno' },
       }),
     }));
 
     render(
       <AuthProvider>
-        <VerificarSesionPrueba />
+        <RegistrarSesionPrueba />
       </AuthProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('apicultor@ejemplo.com')).toBeInTheDocument();
     await waitFor(() => {

@@ -7,8 +7,6 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 import { HttpError, notFound } from '../utils/httpError.js';
-import { enviarCodigoVerificacion } from '../utils/mailer.js';
-import { generarCodigo, fechaExpiracionCodigo } from '../utils/codigoVerificacion.js';
 
 /** Costo del hash bcrypt (igual que auth.controller.js). */
 const BCRYPT_ROUNDS = 10;
@@ -30,7 +28,7 @@ export async function list(req, res, next) {
   try {
     const duenoId = req.user.id;
     const filas = await query(
-      `SELECT u.id, u.nombre, u.email, u.rol, u.email_verificado, u.created_at,
+      `SELECT u.id, u.nombre, u.email, u.rol, u.created_at,
               (SELECT COUNT(*) FROM inspecciones i
                  JOIN colmenas c ON c.id = i.colmena_id
                  JOIN apiarios a ON a.id = c.apiario_id
@@ -52,10 +50,8 @@ export async function list(req, res, next) {
 
 /**
  * POST /api/trabajadores
- * Crea una cuenta de trabajador asociada al dueño autenticado y le envía un
- * código de verificación a su correo: la cuenta queda SIN verificar hasta que
- * el trabajador confirme el código (igual que el auto-registro del dueño).
- * Responde 201 con { id, nombre, email, rol, email_verificado } (sin token ni hash).
+ * Crea una cuenta de trabajador asociada al dueño autenticado.
+ * Responde 201 con { id, nombre, email, rol } (sin token ni hash).
  */
 export async function create(req, res, next) {
   try {
@@ -66,26 +62,16 @@ export async function create(req, res, next) {
     if (existentes.length > 0) throw new HttpError(409, 'El correo ya está registrado');
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const codigo = generarCodigo();
     const resultado = await query(
       `INSERT INTO usuarios
-         (nombre, email, password_hash, rol, dueno_id, email_verificado, codigo_verificacion, codigo_expira)
-       VALUES (?, ?, ?, 'trabajador', ?, 0, ?, ?)`,
-      [nombre, email, passwordHash, req.user.id, codigo, fechaExpiracionCodigo()],
+         (nombre, email, password_hash, rol, dueno_id, email_verificado)
+       VALUES (?, ?, ?, 'trabajador', ?, 1)`,
+      [nombre, email, passwordHash, req.user.id],
     );
 
-    const envio = await enviarCodigoVerificacion(email, codigo, nombre);
-
-    const [trabajador] = await query(
-      'SELECT id, nombre, email, rol, email_verificado FROM usuarios WHERE id = ?',
-      [resultado.insertId],
-    );
+    const trabajador = { id: resultado.insertId, nombre, email, rol: 'trabajador' };
     res.status(201).json({
       ...trabajador,
-      mensaje: 'Trabajador creado. Le enviamos un código de verificación a su correo.',
-      correo_configurado: !envio.demo,
-      // En modo demo local (sin Resend) devolvemos el código para poder probar.
-      ...(envio.demo ? { codigo_demo: codigo } : {}),
     });
   } catch (err) {
     next(err);

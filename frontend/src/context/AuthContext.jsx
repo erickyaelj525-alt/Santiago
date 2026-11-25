@@ -79,36 +79,21 @@ export function AuthProvider({ children }) {
     return sesion.usuario;
   }, []);
 
-  /**
-   * Registra la cuenta del DUEÑO. NO inicia sesión: la cuenta queda pendiente
-   * hasta confirmar el código enviado al correo. Devuelve la respuesta del
-   * backend (con `correo_configurado` y, en modo demo, `codigo_demo`).
-   * Las cuentas de trabajadores las crea el dueño desde "Equipo".
-   */
+  /** Registra la cuenta del dueño e inicia sesión automáticamente. */
   const register = useCallback(async (nombre, email, password) => {
-    return post('/auth/register', { nombre, email, password });
-  }, []);
-
-  /** Confirma el código de verificación y deja la sesión iniciada. */
-  const verificar = useCallback(async (email, codigo) => {
-    const sesion = extraerSesion(await post('/auth/verificar', { email, codigo }));
+    const sesion = extraerSesion(await post('/auth/register', { nombre, email, password }));
     setToken(sesion.token);
     setTokenState(sesion.token);
     setUsuario(sesion.usuario);
     return sesion.usuario;
   }, []);
 
-  /** Solicita un nuevo código de verificación para un correo. */
-  const reenviarCodigo = useCallback(async (email) => {
-    return post('/auth/reenviar-codigo', { email });
-  }, []);
-
   // Helper booleano: true cuando el usuario autenticado es el dueño.
   const esDueno = usuario?.rol === 'dueno';
 
   const value = useMemo(
-    () => ({ usuario, token, cargando, esDueno, login, register, verificar, reenviarCodigo, logout }),
-    [usuario, token, cargando, esDueno, login, register, verificar, reenviarCodigo, logout],
+    () => ({ usuario, token, cargando, esDueno, login, register, logout }),
+    [usuario, token, cargando, esDueno, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
