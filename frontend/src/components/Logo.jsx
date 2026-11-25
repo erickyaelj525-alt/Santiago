@@ -1,0 +1,27 @@
+/**
+ * Logotipo de Apiario Digital: hexágono de panal con abeja.
+ * Se define como SVG inline (sin assets binarios) y es accesible.
+ */
+export default function Logo({ size = 36, titulo = 'Apiario Digital' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label={titulo}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect width="64" height="64" rx="14" fill="#F2A93B" />
+      <path d="M32 8l18 10.4v20.8L32 49.6 14 39.2V18.4z" fill="#FFF9F0" opacity="0.9" />
+      <path d="M32 14l13 7.5v15L32 44 19 36.5v-15z" fill="#3E7C4A" />
+      <ellipse cx="32" cy="27" rx="4.6" ry="7" fill="#F2A93B" />
+      <rect x="27.4" y="23" width="9.2" height="1.6" fill="#2A2118" />
+      <rect x="27.4" y="27" width="9.2" height="1.6" fill="#2A2118" />
+      <rect x="27.4" y="31" width="9.2" height="1.6" fill="#2A2118" />
+      <circle cx="32" cy="19" r="3.2" fill="#2A2118" />
+      <path d="M28.4 18c-4-4.6-8.6-4-8.6-4s1.6 4.4 6.2 6.2z" fill="#FFF9F0" opacity="0.85" />
+      <path d="M35.6 18c4-4.6 8.6-4 8.6-4s-1.6 4.4-6.2 6.2z" fill="#FFF9F0" opacity="0.85" />
+    </svg>
+  );
+}
